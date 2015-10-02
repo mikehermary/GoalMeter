@@ -26,6 +26,7 @@
         defaults = {
             goalAmount: 0,
 			progressAmount: 0,
+			pendingAmount: 0,
 			animate: true,
 			slideDuration: 1000,
 			fadeDuration: 500,
@@ -74,13 +75,15 @@
 
 			// get all them DOM references yo.
 			this.$progress = $(".goal-meter-progress", this.$element);
+			this.$pending = $(".goal-meter-pending", this.$element);
 			this.$goal = $(".goal-meter-goal", this.$element);
 
 			// What axis are we on?
 			this.isHorizontal = this.$element.hasClass("goal-meter-horizontal");
 
 			// init a clean CSS object
-			this.newCSS = {};
+			this.progressCSS = {};
+			this.pendingCSS = {};
 
 			// update the meter
 			this.update();
@@ -106,16 +109,35 @@
 			// Get ze values
 			this.goalAmount = this.getGoalAmount();
 			this.progressAmount = this.getProgressAmount();
+			this.pendingAmount = this.getPendingAmount();
 
 			// Apply some math to this stuff.
-			this.percentageAmount = Math.min(
+			this.progressPercentageAmount = Math.min(
 				Math.round(
 					this.progressAmount / this.goalAmount * 1000
 				) / 10, 100
 			); //make sure we have 1 decimal point :)
 
 			// figure out the new width/height
-			this.newCSS[ this.isHorizontal ? "width" : "height" ] = this.percentageAmount + "%";
+			this.progressCSS[ this.isHorizontal ? "width" : "height" ] = this.progressPercentageAmount + "%";
+			
+			// Apply some math to this stuff.
+			this.pendingPercentageAmount = Math.min(
+				Math.round(
+					this.pendingAmount / this.goalAmount * 1000
+				) / 10, 100
+			); //make sure we have 1 decimal point :)
+
+			// figure out the new width/height
+			this.pendingCSS[ this.isHorizontal ? "width" : "height" ] = this.pendingPercentageAmount + "%";
+			
+			// Set the z-index values
+			if (this.progressAmount > this.pendingAmount) {
+				this.progressCSS[ "z-index" ] = "1";
+			}
+			if (this.progressAmount < this.pendingAmount) {
+				this.pendingCSS[ "z-index" ] = "1";
+			}
 
 			// render stuff. Yeah.
 			this.render();
@@ -136,6 +158,14 @@
 		 */
 		getProgressAmount: function goalMeterGetProgressAmount() {
 			return this.options.progressAmount || parseFloat( this.$progress.text() );
+		},
+		
+		/**
+		 * Get the Pending Amount - either look at the passed in option or look in the DOM
+		 * @returns {Number}
+		 */
+		getPendingAmount: function goalMeterGetPendingAmount() {
+			return this.options.pendingAmount || parseFloat( this.$pending.text() );
 		},
 
 		/**
@@ -165,23 +195,33 @@
 			// Cache amount jQuery elements on first use.
 			this.$goalAmount = this.$goalAmount || this.$goal.find(".goal-meter-amount");
 			this.$progressAmount = this.$progressAmount || this.$progress.find(".goal-meter-amount");
+			this.$pendingAmount = this.$pendingAmount || this.$pending.find(".goal-meter-amount");
 
 			//let's hide the progress indicator
 			this.$progressAmount.hide();
+			this.$pendingAmount.hide();
 
 			// Update the amounts
 			this.$goalAmount.text( this.format( this.goalAmount ) );
 			this.$progressAmount.text( this.format( this.progressAmount ) );
+			this.$pendingAmount.text( this.format( this.pendingAmount ) );
 
 			// animate the progress bar
 			if (this.options.animate !== false) {
-				this.$progress.animate( this.newCSS, this.options.slideDuration, function(){
+				this.$progress.animate( this.progressCSS, this.options.slideDuration, function(){
 					self.$progressAmount.fadeIn(self.options.fadeDuration);
+				});
+				
+				this.$pending.animate( this.pendingCSS, this.options.slideDuration, function(){
+					self.$pendingAmount.fadeIn(self.options.fadeDuration);
 				});
 			}
 			else { // (or if we don't want to animate just update the CSS
-				this.$progress.css( this.newCSS );
+				this.$progress.css( this.progressCSS );
 				this.$progressAmount.show();
+				
+				this.$pending.css( this.pendingCSS );
+				this.$pendingAmount.show();
 			}
 		}
 
